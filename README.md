@@ -49,11 +49,10 @@ Go to kay01-kwon/mobile_platform_description repository,
 download the pkg and then move the pkg into this pkg folder.
 
 # Topic you can get
-<
-/velodyne_points
-/scan
-/odom
-/pose
-/input_msg
-/vel
-/>
+
+  /velodyne_points
+  /scan
+  /odom
+  /pose
+  /input_msg
+  /vel
