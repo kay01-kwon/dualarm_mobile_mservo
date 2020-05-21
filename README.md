@@ -38,4 +38,22 @@ $ rosrun sim_control tracking_controller_prev
 
 Click goal position or publish /move_base_simple/goal in a terminal
 
-# dualarm_mobile_mservo
+# Upload Error
+
+I'm not sure why the mobile_platform_description files is not uploaded. 
+
+mobile_platform_description : 
+
+Go to kay01-kwon/mobile_platform_description repository, 
+
+download the pkg and then move the pkg into this pkg folder.
+
+# Topic you can get
+<
+/velodyne_points
+/scan
+/odom
+/pose
+/input_msg
+/vel
+>
