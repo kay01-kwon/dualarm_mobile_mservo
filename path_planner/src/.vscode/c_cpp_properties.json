@@ -1,0 +1,39 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "/home/kay/catkin_ws/devel/include",
+                "/opt/ros/kinetic/include",
+                "/home/kay/catkin_ws/src/Udacity_assignment/ball_chaser/include",
+                "/home/kay/catkin_ws/src/dualarm_mobile/dualarm_mobile_bringup/include",
+                "/home/kay/catkin_ws/src/gazebo_ros_pkgs/gazebo_plugins/include",
+                "/home/kay/catkin_ws/src/gazebo_ros_pkgs/gazebo_ros/include",
+                "/home/kay/catkin_ws/src/gazebo_ros_pkgs/gazebo_ros_control/include",
+                "/home/kay/catkin_ws/src/laser_line_extraction/include",
+                "/home/kay/catkin_ws/src/loam_velodyne/include",
+                "/home/kay/catkin_ws/src/Dual_arm_project/mobile_control/include",
+                "/home/kay/catkin_ws/src/Dual_arm_project/path_planner/include",
+                "/home/kay/catkin_ws/src/seminar/pubsub/include",
+                "/home/kay/catkin_ws/src/realsense-ros/realsense2_camera/include",
+                "/home/kay/catkin_ws/src/rf2o_laser_odometry/include",
+                "/home/kay/catkin_ws/src/Dual_arm_project/sim_control/include",
+                "/home/kay/catkin_ws/src/teb_local_planner/include",
+                "/home/kay/catkin_ws/src/Dual_arm_project/vehicle_control/include",
+                "/home/kay/catkin_ws/src/velodyne/velodyne_driver/include",
+                "/home/kay/catkin_ws/src/velodyne/velodyne_laserscan/include",
+                "/home/kay/catkin_ws/src/velodyne/velodyne_pointcloud/include",
+                "/usr/include"
+            ],
+            "name": "Linux",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
