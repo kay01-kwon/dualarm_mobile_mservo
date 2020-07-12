@@ -83,9 +83,10 @@ struct command_vel_acc{
     double vy_cmd = 0;
     double vphi_cmd = 0;
 
-    double vx_accumul = 0;
-    double vy_accumul = 0;
-    double vphi_accumul = 0;
+    double vx_cmd_prev = 0;
+    double vy_cmd_prev = 0;
+    double vphi_cmd_prev = 0;
+    
 };
 
 class tracking_controller{
@@ -98,6 +99,7 @@ class tracking_controller{
         publisher_desired_traj = nh_.advertise<nav_msgs::Odometry>("/des_traj",1);
         publisher_cmd_vel = nh_.advertise<mobile_control::motorMsg>("/input_msg",1);
         publisher_slam_pose = nh_.advertise<nav_msgs::Odometry>("/slam_pose",1);
+        publisehr_base_arm_pose = nh_.advertise<nav_msgs::Odometry>("/base_arm_pose",1);
         publisher_error = nh_.advertise<nav_msgs::Odometry>("/error_msg",1);
     }
 
@@ -123,10 +125,9 @@ class tracking_controller{
             dt = curr_time - last_time;
 
             listener_.lookupTransform("map","base_footprint",ros::Time(0),transform);
-            
             est_pos_vel.x_est = transform.getOrigin().x();
             est_pos_vel.y_est = transform.getOrigin().y();
-        
+
             tf::Quaternion quat = transform.getRotation();
             est_pos_vel.phi_est = tf::getYaw(quat);
 
@@ -135,8 +136,6 @@ class tracking_controller{
                 est_pos_vel.phi_est -= 2*M_PI;
             }
 
-            ROS_INFO("x_est y_est phi_est: %lf, %lf, %lf",est_pos_vel.x_est,est_pos_vel.y_est,est_pos_vel.phi_est);
-            //ROS_INFO("vx robot vy_robot (SLAM) : %lf, %lf",vx_robot, vy_robot);
 
         }
         catch(tf::TransformException &ex)
@@ -176,11 +175,17 @@ class tracking_controller{
         vx_des_robot = des_pva.vx_des * cos(est_pos_vel.phi_est) - des_pva.vy_des * sin(est_pos_vel.phi_est);
         vy_des_robot = des_pva.vx_des * sin(est_pos_vel.phi_est) + des_pva.vy_des * cos(est_pos_vel.phi_est);
 
-        cmd_vel_acc.vx_cmd = Kp[0] * err_pos_vel.x_error + Kd[0] * err_pos_vel.vx_error;
-        cmd_vel_acc.vy_cmd = Kp[1] * err_pos_vel.y_error + Kd[1] * err_pos_vel.vy_error;
-        cmd_vel_acc.vphi_cmd = Kp[2] * err_pos_vel.phi_error + Kd[2] * err_pos_vel.vphi_error;        
+        cmd_vel_acc.ax_cmd = ax_des_robot + Kp[0] * err_pos_vel.x_error + Kd[0] * err_pos_vel.vx_error;
+        cmd_vel_acc.ay_cmd = ay_des_robot + Kp[1] * err_pos_vel.y_error + Kd[1] * err_pos_vel.vy_error;
+        cmd_vel_acc.aphi_cmd = des_pva.aphi_des + [2] * err_pos_vel.phi_error + Kd[2] * err_pos_vel.vphi_error;        
+        
+        cmd_vel_acc.vx_cmd = cmd_vel_acc.vx_cmd_prev + cmd_vel_acc.ax_cmd * dt;
+        cmd_vel_acc.vy_cmd = cmd_vel_acc.vy_cmd_prev + cmd_vel_acc.ay_cmd * dt;
+        cmd_vel_acc.vphi_cmd = cmd_vel_acc.vphi_cmd_prev + cmd_vel_acc.aphi_cmd * dt;
 
-        ROS_INFO("vx vy vphi : %lf %lf %lf",cmd_vel_acc.vx_cmd,cmd_vel_acc.vy_cmd,cmd_vel_acc.vphi_cmd);
+        cmd_vel_acc.vx_cmd_prev = cmd_vel_acc.vx_cmd;
+        cmd_vel_acc.vy_cmd_prev = cmd_vel_acc.vy_cmd;
+        cmd_vel_acc.vphi_cmd_prev = cmd_vel_acc.vphi_cmd;
         
         cmd_motor_vel = inverse_kinematics(cmd_vel_acc);
 
@@ -203,6 +208,14 @@ class tracking_controller{
             goal_p.y_goal = est_pos_vel.y_est;
             goal_p.phi_goal = est_pos_vel.phi_est;
 
+            cmd_vel_acc.vx_cmd = 0;
+            cmd_vel_acc.vy_cmd = 0;
+            cmd_vel_acc.vphi_cmd = 0;
+            
+            cmd_vel_acc.vx_cmd_prev = 0;
+            cmd_vel_acc.vy_cmd_prev = 0;
+            cmd_vel_acc.vphi_cmd_prev = 0;
+            
             ROS_INFO("Stop");
             ROS_INFO("distance error : %lf phi_err : %lf",sqrt(pow((goal_p.x_goal-est_pos_vel.x_est),2) + pow((goal_p.y_goal-est_pos_vel.y_est),2)),fabs(goal_p.phi_goal - est_pos_vel.phi_est)*180/M_PI);
         }
@@ -291,6 +304,43 @@ class tracking_controller{
         slam_pose.pose.pose.orientation = slam_quat;
 
         publisher_slam_pose.publish(slam_pose);
+    }
+
+    void publish_base_arm_pose(){
+        nav_msgs::Odometry base_arm;
+
+        tf::StampedTransform transform_base_arm;
+
+        try{
+        double x,y,z;
+
+        double qx,qy,qz,qw;
+
+        listener_.lookupTransform("map","base_arm",ros::Time(0),transform_base_arm);
+
+        x = transform_base_arm.getOrigin().x();
+        y = transform_base_arm.getOrigin().y();
+        z = transform_base_arm.getOrigin().z();
+
+        tf::Quaternion quat = transform_base_arm.getRotation();
+        
+        qx = quat[0]; qy = quat[1]; qz = quat[2]; qw = quat[3];
+
+        base_arm.pose.pose.position.x = x;
+        base_arm.pose.pose.position.y = y;
+        base_arm.pose.pose.position.z = z;
+        base_arm.pose.pose.orientation.x = qx;
+        base_arm.pose.pose.orientation.y = qy;
+        base_arm.pose.pose.orientation.z = qz;
+        base_arm.pose.pose.orientation.w = qw;
+
+        publisehr_base_arm_pose.publish(base_arm);
+        }
+        catch(tf::TransformException &ex)
+        {
+            ROS_ERROR("%s",ex.what());
+            ros::Duration(1.0).sleep();
+        }
     }
 
     void desired_traj(){ 
@@ -411,6 +461,7 @@ class tracking_controller{
 
     ros::NodeHandle nh_;
     tf::TransformListener listener_;
+    //tf::TransformListener listener_base_arm_;
 
     ros::Subscriber subscriber_trajectory;
     ros::Subscriber subscriber_state;
@@ -419,6 +470,7 @@ class tracking_controller{
     ros::Publisher publisher_cmd_vel;
     ros::Publisher publisher_desired_traj;
     ros::Publisher publisher_slam_pose;
+    ros::Publisher publisehr_base_arm_pose;
     ros::Publisher publisher_error;
 
     bool init_pos = true;
@@ -432,11 +484,11 @@ class tracking_controller{
     motor_vel cmd_motor_vel;
 
     // Clamping info : Limited motor vel = 6000 RPM
-    const double motor_vel_lim = 6000; 
+    const double motor_vel_lim = 3000; 
 
     // Controller gain
-    const double Kp[3] = {100,100,100};
-    const double Kd[3] = {80,80,80};
+    const double Kp[3] = {1,1,1};
+    const double Kd[3] = {0.5,0.5,0.5};
     // Specification of robot
     const double wheel_radious = 0.1520/2.0;
     const double r = wheel_radious;
