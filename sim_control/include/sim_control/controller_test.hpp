@@ -9,6 +9,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <mobile_control/motorMsg.h>
+#include <vehicle_control/motorsMsg.h>
 #include <sim_control/desiredMsg.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
@@ -78,6 +79,10 @@ struct command_vel_acc{
     double ax_cmd = 0;
     double ay_cmd = 0;
     double aphi_cmd = 0;
+
+    double vx_cmd_prev = 0;
+    double vy_cmd_prev = 0;
+    double vphi_cmd_prev = 0;
     
     double vx_cmd = 0;
     double vy_cmd = 0;
@@ -96,7 +101,7 @@ class tracking_controller{
     // Publisher Declaration
     void cmd_vel_pub_setting(){
         publisher_desired_traj = nh_.advertise<nav_msgs::Odometry>("/des_traj",1);
-        publisher_cmd_vel = nh_.advertise<mobile_control::motorMsg>("/input_msg",1);
+        publisher_cmd_vel = nh_.advertise<vehicle_control::motorsMsg>("/input_msg",1);
         publisher_error = nh_.advertise<nav_msgs::Odometry>("/error_msg",1);
     }
 
@@ -154,12 +159,18 @@ class tracking_controller{
         vx_des_robot = des_pva.vx_des * cos(est_pos_vel.phi_est) - des_pva.vy_des * sin(est_pos_vel.phi_est);
         vy_des_robot = des_pva.vx_des * sin(est_pos_vel.phi_est) + des_pva.vy_des * cos(est_pos_vel.phi_est);
 
-        cmd_vel_acc.vx_cmd = Kp[0] * err_pos_vel.x_error + Kd[0] * err_pos_vel.vx_error;
-        cmd_vel_acc.vy_cmd = Kp[1] * err_pos_vel.y_error + Kd[1] * err_pos_vel.vy_error;
-        cmd_vel_acc.vphi_cmd = Kp[2] * err_pos_vel.phi_error + Kd[2] * err_pos_vel.vphi_error;        
-
-        ROS_INFO("vx vy vphi : %lf %lf %lf",cmd_vel_acc.vx_cmd,cmd_vel_acc.vy_cmd,cmd_vel_acc.vphi_cmd);
+        cmd_vel_acc.ax_cmd = ax_des_robot + Kp[0] * err_pos_vel.x_error + Kd[0] * err_pos_vel.vx_error;
+        cmd_vel_acc.ay_cmd = ay_des_robot + Kp[1] * err_pos_vel.y_error + Kd[1] * err_pos_vel.vy_error;
+        cmd_vel_acc.aphi_cmd = Kp[2] * err_pos_vel.phi_error + Kd[2] * err_pos_vel.vphi_error;        
         
+        cmd_vel_acc.vx_cmd = cmd_vel_acc.ax_cmd * dt + cmd_vel_acc.vx_cmd_prev;
+        cmd_vel_acc.vy_cmd = cmd_vel_acc.ay_cmd * dt + cmd_vel_acc.vy_cmd_prev;
+        cmd_vel_acc.vphi_cmd = cmd_vel_acc.aphi_cmd * dt + cmd_vel_acc.vphi_cmd_prev;
+
+        cmd_vel_acc.vx_cmd_prev = cmd_vel_acc.vx_cmd;
+        cmd_vel_acc.vy_cmd_prev = cmd_vel_acc.vy_cmd;
+        cmd_vel_acc.vphi_cmd_prev = cmd_vel_acc.vphi_cmd;        
+
         cmd_motor_vel = inverse_kinematics(cmd_vel_acc);
 
         // Unit conversion
@@ -170,7 +181,7 @@ class tracking_controller{
                          
         cmd_motor_vel = clamping(cmd_motor_vel);
 
-        if(sqrt(pow((goal_p.x_goal-est_pos_vel.x_est),2) + pow((goal_p.y_goal-est_pos_vel.y_est),2))<0.020 && fabs(goal_p.phi_goal - est_pos_vel.phi_est)<0.02 || init_pos == true){
+        if(sqrt(pow((goal_p.x_goal-est_pos_vel.x_est),2) + pow((goal_p.y_goal-est_pos_vel.y_est),2))<0.005 && fabs(goal_p.phi_goal - est_pos_vel.phi_est)<0.005 || init_pos == true){
 
             cmd_motor_vel.w[0] = 0;
             cmd_motor_vel.w[1] = 0;
@@ -181,12 +192,17 @@ class tracking_controller{
             goal_p.y_goal = est_pos_vel.y_est;
             goal_p.phi_goal = est_pos_vel.phi_est;
 
+            cmd_vel_acc.vx_cmd_prev = 0;
+            cmd_vel_acc.vy_cmd_prev = 0;
+            cmd_vel_acc.vphi_cmd_prev = 0;
+                        
+
             ROS_INFO("Stop");
             ROS_INFO("distance error : %lf phi_err : %lf",sqrt(pow((goal_p.x_goal-est_pos_vel.x_est),2) + pow((goal_p.y_goal-est_pos_vel.y_est),2)),fabs(goal_p.phi_goal - est_pos_vel.phi_est)*180/M_PI);
         }
 
 
-        mobile_control::motorMsg motor_vel;
+        vehicle_control::motorsMsg motor_vel;
         nav_msgs::Odometry error_msg;
 
         motor_vel.omega1 = cmd_motor_vel.w[0];
@@ -402,11 +418,11 @@ class tracking_controller{
     motor_vel cmd_motor_vel;
 
     // Clamping info : Limited motor vel = 6000 RPM
-    const double motor_vel_lim = 3000; 
+    const double motor_vel_lim = 6000; 
 
     // Controller gain
-    const double Kp[3] = {1,1,1};
-    const double Kd[3] = {0.5,0.5,0.5};
+    const double Kp[3] = {10.0,10.0,10.0};
+    const double Kd[3] = {8,8,8};
     // Specification of robot
     const double wheel_radious = 0.1520/2.0;
     const double r = wheel_radious;
