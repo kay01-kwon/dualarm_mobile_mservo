@@ -48,3 +48,7 @@ target_link_libraries(tracking_pd_controller ${catkin_LIBRARIES})
 add_executable(motor_dynamics src/motor_dynamics.cpp)
 target_link_libraries(motor_dynamics ${catkin_LIBRARIES})
 add_dependencies(motor_dynamics sim_control_generate_messages_cpp)
+
+add_executable(motor_vel_profile src/motor_vel_profile.cpp)
+target_link_libraries(motor_vel_profile ${catkin_LIBRARIES})
+add_dependencies(motor_vel_profile sim_control_generate_messages_cpp)
