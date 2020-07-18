@@ -177,7 +177,7 @@ class tracking_controller{
 
         cmd_vel_acc.ax_cmd = ax_des_robot + Kp[0] * err_pos_vel.x_error + Kd[0] * err_pos_vel.vx_error;
         cmd_vel_acc.ay_cmd = ay_des_robot + Kp[1] * err_pos_vel.y_error + Kd[1] * err_pos_vel.vy_error;
-        cmd_vel_acc.aphi_cmd = des_pva.aphi_des + [2] * err_pos_vel.phi_error + Kd[2] * err_pos_vel.vphi_error;        
+        cmd_vel_acc.aphi_cmd = des_pva.aphi_des + Kp[2] * err_pos_vel.phi_error + Kd[2] * err_pos_vel.vphi_error;        
         
         cmd_vel_acc.vx_cmd = cmd_vel_acc.vx_cmd_prev + cmd_vel_acc.ax_cmd * dt;
         cmd_vel_acc.vy_cmd = cmd_vel_acc.vy_cmd_prev + cmd_vel_acc.ay_cmd * dt;
@@ -487,8 +487,8 @@ class tracking_controller{
     const double motor_vel_lim = 3000; 
 
     // Controller gain
-    const double Kp[3] = {1,1,1};
-    const double Kd[3] = {0.5,0.5,0.5};
+    const double Kp[3] = {10,10,10};
+    const double Kd[3] = {5,5,5};
     // Specification of robot
     const double wheel_radious = 0.1520/2.0;
     const double r = wheel_radious;
