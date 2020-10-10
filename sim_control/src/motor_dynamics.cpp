@@ -2,18 +2,18 @@
 #include <iostream>
 #include "ros/ros.h"
 #include <mobile_control/motorMsg.h>
+#include <ethercat_test/vel.h>
 #include <geometry_msgs/Twist.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
 
 using namespace std;
+using ethercat_test::vel;
 double motor_input[4];
 
-void motorsCallback(const mobile_control::motorMsg::ConstPtr& motors){
-  motor_input[0] = motors->omega1;
-  motor_input[1] = motors->omega2;
-  motor_input[2] = motors->omega3;
-  motor_input[3] = motors->omega4;
+void motorsCallback(const vel::ConstPtr& motors){
+  for(int i = 0; i < 4; ++i)
+    motor_input[i] = motors->velocity[i];
 
   motor_input[1] = -motor_input[1];
   motor_input[2] = -motor_input[2];
@@ -35,27 +35,28 @@ int main(int argc,char **argv){
   ros::init(argc,argv,"motor_dynamics");
   ros::NodeHandle nh;
 
-  ros::Subscriber motor_sub = nh.subscribe("/input_msg",100,motorsCallback);
+  ros::Subscriber motor_sub = nh.subscribe("/input_msg",1,motorsCallback);
 
-  ros::Publisher vel_pub = nh.advertise<geometry_msgs::Twist>("/vel",100);
-  ros::Rate loop_rate(100);
+  ros::Publisher vel_pub = nh.advertise<geometry_msgs::Twist>("/vel",1);
+  ros::Publisher measure_pub = nh.advertise<vel>("/measure",1);
+  ros::Rate loop_rate(200);
 
   // Mecanum platform specification //
   double wheel_radius = 0.076;
-  double wheel_separation_a = 0.2600;
-  double wheel_separation_b = 0.2680;
+  double wheel_separation_a = 0.2170;
+  double wheel_separation_b = 0.1687;
   double l = wheel_separation_a + wheel_separation_b;
 
   // Motor specification //
-  double gear_ratio = 74;
+  double gear_ratio = 74.5;
   double rpm_to_radps = 2*M_PI/60;
   double radps_to_rpm = 60/2.0/M_PI;
   double motor_act[4]={0,0,0,0};
   double alp[4]={0,0,0,0};
-  const double alp_positive = 3000;
-  const double alp_negative = -3000;
+  const double alp_positive = 6000;
+  const double alp_negative = -6000;
   const double w_max = 8;
-  const double alp_max = 3000;
+  const double alp_max = 6000;
   const double Kp[4] = {1,1,1,1};
   const double Kd[4] = {0.1,0.1,0.1,0.1};
   double dt=0.01;
@@ -78,6 +79,7 @@ int main(int argc,char **argv){
 
   while(ros::ok()){
       geometry_msgs::Twist cmd_vel;
+      vel measure_msg;
       curr_time = ros::Time::now().toSec();
       dt = curr_time - last_time;
 
@@ -133,6 +135,12 @@ int main(int argc,char **argv){
       motor_act[2] = motor_act[2] + alp[2] * dt;
       motor_act[3] = motor_act[3] + alp[3] * dt;
 
+      measure_msg.velocity[0] = motor_act[0];
+      measure_msg.velocity[1] = -motor_act[1];
+      measure_msg.velocity[2] = -motor_act[2];
+      measure_msg.velocity[3] = motor_act[3];
+      measure_pub.publish(measure_msg);    
+
     // RPM to RADPS conversion to offer velocity to simulator //
       motor_act[0] = motor_act[0]/gear_ratio*rpm_to_radps;
       motor_act[1] = motor_act[1]/gear_ratio*rpm_to_radps;
@@ -176,7 +184,7 @@ int main(int argc,char **argv){
       cmd_vel.linear.x = vx;
       cmd_vel.linear.y = vy;
       cmd_vel.angular.z = vp;
-      vel_pub.publish(cmd_vel);
+      vel_pub.publish(cmd_vel);  
 
       ros::spinOnce();
       loop_rate.sleep();
