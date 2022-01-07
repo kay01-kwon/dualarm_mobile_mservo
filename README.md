@@ -19,23 +19,24 @@ $ cm
 Execution
 
 1. Simulator
-
+```
 $ roslaunch mobile_platform_description gazebo_v1.launch
-
+```
 2. SLAM
-
+```
 $ roslaunch dualamr_mobile_localization gmapping.launch
-
+```
 3. Planner
-
+```
 $ roslaunch dualarm_mobile_planner teb_local_planner.launch
-
+```
 4. Controller
-
+```
 $ rosrun sim_control motor_dynamics
-
+```
+```
 $ rosrun sim_control tracking_controller_prev
-
+```
 Click goal position or publish /move_base_simple/goal in a terminal
 
 # Upload Error
