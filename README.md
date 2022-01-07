@@ -24,7 +24,7 @@ $ roslaunch mobile_platform_description gazebo_v1.launch
 ```
 2. SLAM
 ```
-$ roslaunch dualamr_mobile_localization gmapping.launch
+$ roslaunch dualarm_mobile_localization gmapping.launch
 ```
 3. Planner
 ```
